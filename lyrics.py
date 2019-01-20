@@ -1,4 +1,4 @@
-import requests, re
+import requests, re, sqlite3
 from bs4 import BeautifulSoup
 from genius_info import ACCESS_TOKEN
 
@@ -19,7 +19,6 @@ def request_artist_songs(artist_id):
 
 		if len(json["response"]["songs"]) > 0:
 			for song in json["response"]["songs"]:
-				# print(song["primary_artist"])
 				if song["primary_artist"]["name"].lower() == "flatsound":
 					titles.append(song["title"])
 			i = i + 1
@@ -72,8 +71,42 @@ def get_lyrics(song_title, artist_name):
 		return "No song found"
 
 
-flatsound_songs = request_artist_songs("359125")
-for song in flatsound_songs:
-	song_data = get_lyrics(song, "Flatsound")
-	print("Title: ", song, "\nAlbum: ", song_data["album"])
-	# print(lyrics, "\n\n")
+def make_db():
+	path = "flatsound.sqlite3"
+	conn = sqlite3.connect(path)
+	cur = conn.cursor()
+
+	cur.execute(""" DROP TABLE IF EXISTS albums """)
+	cur.execute(""" CREATE TABLE albums (album_name TEXT, album_id INTEGER PRIMARY KEY )""")
+
+	cur.execute(""" DROP TABLE IF EXISTS songs """)
+	cur.execute(""" CREATE TABLE songs (song_name TEXT, song_id INTEGER PRIMARY KEY, album_id INTEGER, lyrics TEXT)""")
+
+	conn.commit()
+
+	flatsound_songs = request_artist_songs("359125")
+	albumList = []
+	songList = []
+
+	for song in flatsound_songs:
+		song_data = get_lyrics(song, "Flatsound")
+
+		if song_data["album"] not in albumList:
+			albumList.append(song_data["album"])
+			cur.execute(""" INSERT INTO albums (album_name, album_id) VALUES (?,?)""", 
+				(song_data["album"], len(albumList)) ) 
+		album_id = albumList.index(song_data["album"]) + 1
+
+		if song not in songList:
+			songList.append(song)
+			cur.execute(""" INSERT INTO songs (song_name, song_id, album_id, lyrics) VALUES (?,?,?,?)""", 
+				(song, len(songList), album_id, song_data["lyrics"]) )
+	conn.commit()
+
+		# print("Title: ", song, "\nAlbum: ", song_data["album"])
+		# print("\n\n")
+
+
+make_db()
+
+
