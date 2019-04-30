@@ -1,3 +1,6 @@
+# alexandra cortez
+# get data from genius api and add to sqlite3 databse
+
 import requests, re, sqlite3
 from bs4 import BeautifulSoup
 from genius_info import ACCESS_TOKEN
@@ -72,6 +75,7 @@ def get_lyrics(song_title, artist_name):
 
 
 def make_db():
+	# set up the database
 	path = "flatsound.sqlite3"
 	conn = sqlite3.connect(path)
 	cur = conn.cursor()
@@ -84,10 +88,12 @@ def make_db():
 
 	conn.commit()
 
+	# get flatsounds info from the api
 	flatsound_songs = request_artist_songs("359125")
 	albumList = []
 	songList = []
 
+	# add this info to the database
 	for song in flatsound_songs:
 		song_data = get_lyrics(song, "Flatsound")
 
@@ -103,8 +109,6 @@ def make_db():
 				(song, len(songList), album_id, song_data["lyrics"]) )
 	conn.commit()
 
-		# print("Title: ", song, "\nAlbum: ", song_data["album"])
-		# print("\n\n")
 
 
 make_db()
